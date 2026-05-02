@@ -62,6 +62,43 @@ def load_image(filename):
     return crop_transparent_padding(image)
 
 
+def load_raw_image(filename):
+    path = cfg.ASSET_DIR / filename
+    try:
+        return pygame.image.load(path).convert_alpha()
+    except pygame.error as error:
+        raise SystemExit(f"Could not load image: {path}") from error
+
+
+def split_toggle_image(surface):
+    width, height = surface.get_size()
+    top = pygame.Surface((width, height // 2), pygame.SRCALPHA)
+    bottom = pygame.Surface((width, height - height // 2), pygame.SRCALPHA)
+    top.blit(surface, (0, 0), pygame.Rect(0, 0, width, height // 2))
+    bottom.blit(surface, (0, 0), pygame.Rect(0, height // 2, width, height - height // 2))
+    return crop_transparent_padding(remove_background(top)), crop_transparent_padding(remove_background(bottom))
+
+
+def make_pause_button():
+    surface = pygame.Surface(cfg.PAUSE_BUTTON_SIZE, pygame.SRCALPHA)
+    rect = surface.get_rect()
+    pygame.draw.rect(surface, (32, 24, 16, 230), rect.inflate(-4, -4), border_radius=18)
+    pygame.draw.rect(surface, (226, 190, 103), rect.inflate(-10, -10), border_radius=15)
+    pygame.draw.rect(surface, (255, 220, 118), rect.inflate(-18, -18), border_radius=12)
+    bar_width = 10
+    bar_height = 34
+    gap = 9
+    start_x = rect.centerx - gap - bar_width
+    for x in (start_x, start_x + bar_width + gap * 2):
+        pygame.draw.rect(
+            surface,
+            (0, 0, 0),
+            pygame.Rect(x, rect.centery - bar_height // 2, bar_width, bar_height),
+            border_radius=4,
+        )
+    return surface
+
+
 def load_assets():
     bird_images = {
         name: fit_cover(load_image(filename), cfg.BIRD_SIZE)
@@ -71,7 +108,22 @@ def load_assets():
         name: load_image(filename)
         for name, filename in cfg.PILLAR_IMAGES.items()
     }
-    return {"bird": bird_images, "pillar": pillar_images}
+
+    ui_images = {}
+    for name, filename in cfg.UI_IMAGES.items():
+        if name == "background":
+            ui_images[name] = fit_cover(load_raw_image(filename), (cfg.WIDTH, cfg.HEIGHT))
+        elif name == "sound_toggle":
+            on_image, off_image = split_toggle_image(load_raw_image(filename))
+            ui_images["sound_on"] = on_image
+            ui_images["sound_off"] = off_image
+        elif name == "logo":
+            ui_images[name] = fit_cover(load_image(filename), cfg.LOGO_SIZE)
+        else:
+            ui_images[name] = load_image(filename)
+    ui_images["pause"] = make_pause_button()
+
+    return {"bird": bird_images, "pillar": pillar_images, "ui": ui_images}
 
 
 def get_scaled_image(image, size, flip_y=False):

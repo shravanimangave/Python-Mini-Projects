@@ -3,6 +3,7 @@ import random
 import pygame
 
 import settings as cfg
+from utils.assets import get_scaled_image
 
 
 class PipePair:
@@ -27,7 +28,10 @@ class PipePair:
         self.bottom_rect.x = int(self.x)
 
     def is_off_screen(self):
-        return self.top_rect.right < 0
+        return (
+            self.get_pillar_draw_rect(self.top_rect).right < 0
+            and self.get_pillar_draw_rect(self.bottom_rect).right < 0
+        )
 
     def collides_with(self, rect):
         return self.top_collision_rect.colliderect(rect) or self.bottom_collision_rect.colliderect(rect)
@@ -53,23 +57,32 @@ class PipePair:
             return self.images["mid"]
         return self.images["tall"]
 
+    def get_pillar_draw_rect(self, pipe_rect):
+        visual_width = max(cfg.PIPE_WIDTH, cfg.PILLAR_VISUAL_WIDTH)
+        return pygame.Rect(
+            pipe_rect.centerx - visual_width // 2,
+            pipe_rect.y,
+            visual_width,
+            pipe_rect.height,
+        )
+
     def draw(self, surface):
         top_image = self.get_pillar_image(self.top_rect.height)
         bottom_image = self.get_pillar_image(self.bottom_rect.height)
+        top_draw_rect = self.get_pillar_draw_rect(self.top_rect)
+        bottom_draw_rect = self.get_pillar_draw_rect(self.bottom_rect)
         surface.blit(
-            self.fit_image(
+            get_scaled_image(
                 top_image,
-                self.top_rect.size,
+                top_draw_rect.size,
                 flip_y=True,
-                vertical_anchor="bottom",
             ),
-            self.top_rect,
+            top_draw_rect,
         )
         surface.blit(
-            self.fit_image(
+            get_scaled_image(
                 bottom_image,
-                self.bottom_rect.size,
-                vertical_anchor="top",
+                bottom_draw_rect.size,
             ),
-            self.bottom_rect,
+            bottom_draw_rect,
         )
