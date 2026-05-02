@@ -1,0 +1,75 @@
+import random
+
+import pygame
+
+import settings as cfg
+
+
+class PipePair:
+    def __init__(self, x, images, fit_image):
+        top_height = random.randint(cfg.MIN_PIPE_HEIGHT, cfg.MAX_PIPE_TOP_HEIGHT)
+
+        self.x = x
+        self.images = images
+        self.fit_image = fit_image
+        self.top_rect = pygame.Rect(x, 0, cfg.PIPE_WIDTH, top_height)
+        self.bottom_rect = pygame.Rect(
+            x,
+            top_height + cfg.PIPE_GAP,
+            cfg.PIPE_WIDTH,
+            cfg.PLAYABLE_HEIGHT - top_height - cfg.PIPE_GAP,
+        )
+        self.scored = False
+
+    def update(self):
+        self.x -= cfg.PIPE_SPEED
+        self.top_rect.x = int(self.x)
+        self.bottom_rect.x = int(self.x)
+
+    def is_off_screen(self):
+        return self.top_rect.right < 0
+
+    def collides_with(self, rect):
+        return self.top_collision_rect.colliderect(rect) or self.bottom_collision_rect.colliderect(rect)
+
+    @property
+    def top_collision_rect(self):
+        return self.top_rect.inflate(
+            -cfg.PIPE_COLLISION_INSET_X * 2,
+            -cfg.PIPE_COLLISION_INSET_Y * 2,
+        )
+
+    @property
+    def bottom_collision_rect(self):
+        return self.bottom_rect.inflate(
+            -cfg.PIPE_COLLISION_INSET_X * 2,
+            -cfg.PIPE_COLLISION_INSET_Y * 2,
+        )
+
+    def get_pillar_image(self, height):
+        if height < cfg.PILLAR_SMALL_MAX_HEIGHT:
+            return self.images["small"]
+        if height < cfg.PILLAR_MID_MAX_HEIGHT:
+            return self.images["mid"]
+        return self.images["tall"]
+
+    def draw(self, surface):
+        top_image = self.get_pillar_image(self.top_rect.height)
+        bottom_image = self.get_pillar_image(self.bottom_rect.height)
+        surface.blit(
+            self.fit_image(
+                top_image,
+                self.top_rect.size,
+                flip_y=True,
+                vertical_anchor="bottom",
+            ),
+            self.top_rect,
+        )
+        surface.blit(
+            self.fit_image(
+                bottom_image,
+                self.bottom_rect.size,
+                vertical_anchor="top",
+            ),
+            self.bottom_rect,
+        )
